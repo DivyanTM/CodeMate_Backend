@@ -9,6 +9,7 @@ import { connectDB } from "./config/db.js";
 import { errorMiddleWare } from "./middleware/ErrorMiddleware.js";
 import { AppError } from "./utils/AppError.js";
 import logger from "./utils/logger.js";
+import { AuthRoutes } from "./routes/auth.routes.js";
 
 dotenv.config();
 
@@ -24,9 +25,12 @@ app.get("/", (req: Request, res: Response) => {
   throw new AppError("Test error triggered", 400);
 });
 
+app.use("/api/auth",AuthRoutes);
+
 app.use(errorMiddleWare);
 
 const PORT = process.env['PORT'] || 5000;
+
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
 });
