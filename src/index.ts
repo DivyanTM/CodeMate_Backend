@@ -30,7 +30,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (req: Request, _: Response) => {
   logger.http(`Accessing root from ${req.ip}`);
   throw new AppError("Test error triggered", 400);
 });

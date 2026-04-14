@@ -5,7 +5,7 @@ import { HTTPStatusCodes } from "../constants/HttpStatusCodes.js";
 
 export function authMiddleware(
     req: Request,
-    res: Response,
+    _: Response,
     next: NextFunction,
 ): void {
     const authHeader = req.headers.authorization;

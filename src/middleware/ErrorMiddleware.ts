@@ -9,7 +9,7 @@ export const errorMiddleWare: ErrorRequestHandler = (
     err: any,
     req: Request,
     res: Response,
-    next: NextFunction,
+    _: NextFunction,
     ) => {
     const statusCode = err instanceof AppError ? err.statusCode : HTTPStatusCodes.INTERNAL_SERVER_ERROR;
     const message = err.message || "Something went wrong!";
