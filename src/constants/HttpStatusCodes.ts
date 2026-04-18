@@ -6,5 +6,6 @@ export const HTTPStatusCodes = {
     FORBIDDEN: 403,
     NOT_FOUND: 404,
     INTERNAL_SERVER_ERROR: 500,
-    NO_CONTENT: 204
+    NO_CONTENT: 204,
+    CONFLICT: 409,  
 };
