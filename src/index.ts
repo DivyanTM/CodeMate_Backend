@@ -11,6 +11,7 @@ import { errorMiddleWare } from "./middleware/ErrorMiddleware.js";
 import { AuthRoutes } from "./routes/auth.routes.js";
 import { AppError } from "./utils/AppError.js";
 import logger from "./utils/logger.js";
+import { UserRoutes } from "./routes/user.routes.js";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.get("/", (req: Request, _: Response) => {
 });
 
 app.use("/api/auth", AuthRoutes);
+app.use("/api/users", UserRoutes);
 
 app.use(errorMiddleWare);
 

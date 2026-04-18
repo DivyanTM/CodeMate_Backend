@@ -17,7 +17,7 @@ async function createUser(name: string,email: string,hashedPassword: string,date
 async function getUserById(userId: string): Promise<IUser | null> {
   const user = await User.findById(userId).select("-password");
   return user ? (user.toObject() as IUser) : null;
-}
+} 
 
 async function getUserByEmail(email: string): Promise<IUser | null> {
   const user = await User.findOne({ email: email.toLowerCase() });
