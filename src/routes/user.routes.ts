@@ -5,6 +5,7 @@ import { upload } from "../middleware/MulterMiddleware.js";
 
 const router = Express.Router();
 
+router.get("/profile/me", UserController.getMyProfile);
 router.put("/profile/basic", UserController.updateProfile);
 router.patch("/profile/picture", upload.single("profilePicture"), UserController.updateProfilePicture,);
 router.patch("/profile/location", UserController.updateLocation);

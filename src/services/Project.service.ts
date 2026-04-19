@@ -5,7 +5,8 @@ import { ProjectMember } from "../models/mappings/ProjectMember.js";
 import type { IProject, IProjectSkill, IProjectMember } from "../interfaces/Project.js";
 import { AppError } from "../utils/AppError.js";
 import { HTTPStatusCodes } from "../constants/HttpStatusCodes.js";
-
+import { Skill } from "../models/Skills.js";
+import { ProjectTeam } from "../models/mappings/ProjectTeam.js";
 
 // ─────────────────────────── CRUD ────────────────────────────────────
 
@@ -33,19 +34,73 @@ async function getProjectById(projectId: string): Promise<IProject | null> {
     return project ? (project.toObject() as IProject) : null;
 }
 
-async function updateProject( projectId: string,title?: string,description?: string,): Promise<IProject | null> {
+async function updateProject( 
+    projectId: string,
+    title?: string,
+    description?: string,
+    status?: "active" | "inactive",
+    skills?: string[],
+    teamId?: string | null
+): Promise<IProject | null> {
+    
+    // 1. Update the core project document
     const project = await Project.findByIdAndUpdate(
         projectId,
         {
-        ...(title && { title }),
-        ...(description !== undefined && { description }),
-        updatedAt: new Date(),
+            ...(title && { title }),
+            ...(description !== undefined && { description }),
+            ...(status && { status }),
+            updatedAt: new Date(),
         },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
     );
-    return project ? (project.toObject() as IProject) : null;
-}
 
+    if (!project) return null;
+
+    // 2. Sync the skills mapping if an array was provided
+    if (skills && Array.isArray(skills)) {
+        const projectSkillEntries = [];
+
+        for (const sName of skills) {
+            const cleanName = sName.trim();
+            if (!cleanName) continue;
+
+            // Find existing skill or create a new one
+            let skillDoc = await Skill.findOne({ name: new RegExp(`^${cleanName}$`, 'i') });
+            if (!skillDoc) {
+                skillDoc = await Skill.create({ name: cleanName, type: "technical" });
+            }
+
+            projectSkillEntries.push({
+                projectId,
+                skillId: skillDoc._id,
+                proficiencyLevel: "intermediate"
+            });
+        }
+
+        // Wipe old skills for this project and insert the fresh list
+        await ProjectSkills.deleteMany({ projectId });
+        if (projectSkillEntries.length > 0) {
+            await ProjectSkills.insertMany(projectSkillEntries);
+        }
+    }
+
+    if (teamId !== undefined) {
+        if (teamId === null || teamId === "") {
+            // Remove the team assignment
+            await ProjectTeam.findOneAndDelete({ projectId });
+        } else {
+            // Upsert: Update if exists, Create if it doesn't
+            await ProjectTeam.findOneAndUpdate(
+                { projectId },
+                { teamId },
+                { upsert: true, returnDocument: 'after' }        
+            );
+        }
+    }
+
+    return project.toObject() as IProject;
+}
 async function deleteProject(projectId: string): Promise<void> {
     await Project.findByIdAndUpdate(projectId, {
         status: "inactive",
@@ -145,12 +200,33 @@ async function getProjectMembers(projectId: string): Promise<IProjectMember[]> {
     return members.map((m) => m.toObject() as IProjectMember);
 }
 
-async function getProjectsByUser(userId: string): Promise<IProjectMember[]> {
-    const projects = await ProjectMember.find({
+async function getProjectsByUser(userId: string): Promise<any[]> {
+    const projectMembers = await ProjectMember.find({
         userId,
         status: "active",
     }).populate("projectId");
-    return projects.map((p) => p.toObject() as IProjectMember);
+
+    const projectsWithTeams = await Promise.all(
+        projectMembers.map(async (p) => {
+            const projectObj = p.toObject();
+            const projectData = projectObj.projectId as any;
+            
+            // Check if projectId populated successfully
+            if (projectData && projectData._id) {
+                // Look for the team mapping
+                const teamMapping = await ProjectTeam.findOne({ projectId: projectData._id });
+                
+                if (teamMapping) {
+                    // Force it to a string so it easily passes through JSON
+                    projectData.linkedTeamId = teamMapping.teamId.toString();
+                    console.log(`Attached Team ${projectData.linkedTeamId} to Project ${projectData.title}`); // <-- DEBUG LOG
+                }
+            }
+            return projectObj;
+        })
+    );
+
+    return projectsWithTeams;
 }
 
 export const ProjectService = {

@@ -21,7 +21,7 @@ function getParam(req: Request, key: string): string {
 
 
 async function createProject(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const { error, value } = ProjectValidator.createProjectSchema.validate(
@@ -57,7 +57,7 @@ async function getProjectById(req: Request, res: Response): Promise<void> {
 }
 
 async function updateProject(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projectId = getParam(req, "projectId");
@@ -72,20 +72,25 @@ async function updateProject(req: Request, res: Response): Promise<void> {
         HTTPStatusCodes.BAD_REQUEST,
         );
 
-    const { title, description } = value;
-    const project = await ProjectService.updateProject(
+   
+    const { title, description, status, skills ,teamId} = value;
+    
+       const project = await ProjectService.updateProject(
         projectId,
         title,
         description,
+        status, 
+        skills,
+        teamId
     );
+    
     if (!project)
         throw new AppError("Project not found", HTTPStatusCodes.NOT_FOUND);
 
     res.status(HTTPStatusCodes.OK).json({ status: "success", data: { project } });
 }
-
 async function deleteProject(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projectId = getParam(req, "projectId");
@@ -99,7 +104,7 @@ async function deleteProject(req: Request, res: Response): Promise<void> {
 
 
 async function addProjectSkill(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projectId = getParam(req, "projectId");
@@ -127,7 +132,7 @@ async function addProjectSkill(req: Request, res: Response): Promise<void> {
 }
 
 async function removeProjectSkill(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projectId = getParam(req, "projectId");
@@ -150,7 +155,7 @@ async function getProjectSkills(req: Request, res: Response): Promise<void> {
 
 
 async function addProjectMember(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projectId = getParam(req, "projectId");
@@ -178,7 +183,7 @@ async function addProjectMember(req: Request, res: Response): Promise<void> {
 }
 
 async function removeProjectMember(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projectId = getParam(req, "projectId");
@@ -192,7 +197,7 @@ async function removeProjectMember(req: Request, res: Response): Promise<void> {
 }
 
 async function updateMemberRole(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projectId = getParam(req, "projectId");
@@ -228,7 +233,7 @@ async function getProjectMembers(req: Request, res: Response): Promise<void> {
 }
 
 async function getProjectsByUser(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const projects = await ProjectService.getProjectsByUser(userId);

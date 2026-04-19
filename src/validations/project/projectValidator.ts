@@ -13,7 +13,10 @@ const createProjectSchema = Joi.object({
 
 const updateProjectSchema = Joi.object({
     title: Joi.string().trim().min(3).max(100).optional(),
-    description: Joi.string().trim().max(500).optional(),
+    description: Joi.string().trim().max(500).optional().allow(''),
+    status: Joi.string().valid("active", "inactive").optional(),
+    skills: Joi.array().items(Joi.string().trim()).optional(),
+    teamId: Joi.string().hex().length(24).allow(null, "").optional(), 
 }).min(1);
 
 const addProjectSkillSchema = Joi.object({

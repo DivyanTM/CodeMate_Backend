@@ -3,7 +3,7 @@ import { ProjectController } from "../controllers/project.controller.js";
 
 const router = Router();
 
-
+router.get("/user/me",  ProjectController.getProjectsByUser);
 router.post("/",  ProjectController.createProject);
 router.get("/:projectId", ProjectController.getProjectById);
 router.patch("/:projectId",  ProjectController.updateProject);
@@ -21,6 +21,6 @@ router.patch("/:projectId/members/:memberId",ProjectController.updateMemberRole,
 router.get("/:projectId/members", ProjectController.getProjectMembers);
 
 
-router.get("/user/me",  ProjectController.getProjectsByUser);
+
 
 export const ProjectRoutes = router;

@@ -18,10 +18,10 @@ async function updateProfile(req: Request, res: Response): Promise<void> {
         throw new AppError( error.details?.[0]?.message || "Invalid input", HTTPStatusCodes.BAD_REQUEST);
 
     
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
-    const { name, bio, headline, githubURI, linkedinURI, portfolioURI, lastKnownLocation,} = value;
+    const { name, bio, headline, githubURI, linkedinURI, portfolioURI, lastKnownLocation,skills} = value;
 
     
     const updatedUser = await UserService.updateUserProfile(
@@ -33,6 +33,7 @@ async function updateProfile(req: Request, res: Response): Promise<void> {
         linkedinURI,
         portfolioURI,
         lastKnownLocation,
+        skills
     );
 
     if (!updatedUser)
@@ -49,7 +50,7 @@ async function updateProfile(req: Request, res: Response): Promise<void> {
 
 async function updateProfilePicture(req: Request, res: Response ): Promise<void> {
 
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const file = req.file;
@@ -86,7 +87,7 @@ async function updateProfilePicture(req: Request, res: Response ): Promise<void>
 
 
 async function updateLocation(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const { error, value } = updateLocationSchema.validate(req.body ?? {}, {
@@ -119,7 +120,7 @@ async function updateLocation(req: Request, res: Response): Promise<void> {
 }
 
 async function changePassword(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const { error, value } = changePasswordSchema.validate(req.body ?? {}, {
@@ -144,7 +145,7 @@ async function changePassword(req: Request, res: Response): Promise<void> {
 }
 
 async function resetPassword(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const { error, value } = resetPasswordSchema.validate(req.body ?? {}, {
@@ -169,7 +170,7 @@ async function resetPassword(req: Request, res: Response): Promise<void> {
 
 
 async function deactivateUser(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     await UserService.deactivateUser(userId);
@@ -181,7 +182,7 @@ async function deactivateUser(req: Request, res: Response): Promise<void> {
 }
 
 async function reactivateUser(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     await UserService.reactivateUser(userId);
@@ -193,7 +194,7 @@ async function reactivateUser(req: Request, res: Response): Promise<void> {
 }
 
 async function deleteUser(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     await UserService.deleteUser(userId);
@@ -201,6 +202,19 @@ async function deleteUser(req: Request, res: Response): Promise<void> {
     res.status(HTTPStatusCodes.NO_CONTENT).json({
         status: "success",
         message: "Account deleted successfully",
+    });
+}
+
+async function getMyProfile(req: Request, res: Response): Promise<void> {
+    const userId = req.user?.userId; 
+    if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
+
+    const user = await UserService.getUserById(userId);
+    if (!user) throw new AppError("User not found", HTTPStatusCodes.NOT_FOUND);
+
+    res.status(HTTPStatusCodes.OK).json({
+        status: "success",
+        data: { user },
     });
 }
 
@@ -212,5 +226,6 @@ export const UserController = {
     resetPassword,
     deactivateUser,
     reactivateUser,
-    deleteUser
+    deleteUser,
+    getMyProfile
 }

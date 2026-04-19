@@ -1,10 +1,17 @@
-import { User } from "../models/User.js";
-import type { IUser } from "../interfaces/User.js";
-import { hashPassword, verifyPassword } from "../utils/Password.js";
-import { AppError } from "../utils/AppError.js";
 import { HTTPStatusCodes } from "../constants/HttpStatusCodes.js";
+import type { IUser } from "../interfaces/User.js";
+import { UserSkill } from "../models/mappings/UserSkill.js";
+import { Skill } from "../models/Skills.js";
+import { User } from "../models/User.js";
+import { AppError } from "../utils/AppError.js";
+import { hashPassword, verifyPassword } from "../utils/Password.js";
 
-async function createUser(name: string,email: string,hashedPassword: string,dateOfBirth: Date,): Promise<IUser> {
+async function createUser(
+  name: string,
+  email: string,
+  hashedPassword: string,
+  dateOfBirth: Date,
+): Promise<IUser> {
   const user = await User.create({
     name,
     email: email.toLowerCase(),
@@ -14,10 +21,23 @@ async function createUser(name: string,email: string,hashedPassword: string,date
   return user.toObject() as IUser;
 }
 
-async function getUserById(userId: string): Promise<IUser | null> {
+async function getUserById(userId: string): Promise<any | null> {
   const user = await User.findById(userId).select("-password");
-  return user ? (user.toObject() as IUser) : null;
-} 
+  if (!user) return null;
+
+  const userObj = user.toObject() as any;
+
+  // Fetch the mapped skills and attach them as an array of strings
+  const userSkills = await UserSkill.find({ userId }).populate("skillId");
+  userObj.skills = userSkills
+    .map((us: any) => us.skillId?.name)
+    .filter(Boolean);
+
+  // Placeholder for experience (we will build this next)
+  userObj.experience = [];
+
+  return userObj;
+}
 
 async function getUserByEmail(email: string): Promise<IUser | null> {
   const user = await User.findOne({ email: email.toLowerCase() });
@@ -33,7 +53,8 @@ async function updateUserProfile(
   linkedinURI?: string,
   portfolioURI?: string,
   lastKnownLocation?: number[],
-): Promise<IUser | null> {
+  skills?: string[],
+): Promise<any | null> {
   const user = await User.findByIdAndUpdate(
     userId,
     {
@@ -46,38 +67,78 @@ async function updateUserProfile(
       ...(lastKnownLocation && { lastKnownLocation }),
       updatedAt: new Date(),
     },
-    { new: true, runValidators: true },
+    // FIXED WARNING HERE 👇
+    { returnDocument: "after", runValidators: true },
   ).select("-password");
 
-  return user ? (user.toObject() as IUser) : null;
-}
+  if (!user) return null;
 
-async function updateProfilePicture(userId: string,imageBuffer: Buffer,): Promise<IUser | null> {
+  if (skills && Array.isArray(skills)) {
+    const skillEntries = [];
+    for (const sName of skills) {
+      const cleanName = sName.trim();
+      if (!cleanName) continue;
+      let skillDoc = await Skill.findOne({
+        name: new RegExp(`^${cleanName}$`, "i"),
+      });
+      if (!skillDoc) {
+        skillDoc = await Skill.create({ name: cleanName, type: "technical" });
+      }
+      skillEntries.push({
+        userId,
+        skillId: skillDoc._id,
+        proficiency: "intermediate",
+      });
+    }
+    await UserSkill.deleteMany({ userId });
+    if (skillEntries.length > 0) {
+      await UserSkill.insertMany(skillEntries);
+    }
+  }
+
+  return await getUserById(userId);
+}
+async function updateProfilePicture(
+  userId: string,
+  imageBuffer: Buffer,
+): Promise<any | null> {
   const user = await User.findByIdAndUpdate(
     userId,
     { profilePicture: imageBuffer, updatedAt: new Date() },
-    { new: true },
+    // FIXED WARNING HERE 👇
+    { returnDocument: "after" },
   ).select("-password");
 
-  return user ? (user.toObject() as IUser) : null;
+  return user ? (user.toObject() as any) : null;
 }
 
-async function updateLocation(userId: string,coordinates: [number, number],): Promise<IUser | null> {
+async function updateLocation(
+  userId: string,
+  coordinates: [number, number],
+): Promise<any | null> {
   const user = await User.findByIdAndUpdate(
     userId,
     { lastKnownLocation: coordinates, updatedAt: new Date() },
-    { new: true },
+    // FIXED WARNING HERE 👇
+    { returnDocument: "after" },
   ).select("-password");
 
-  return user ? (user.toObject() as IUser) : null;
+  return user ? (user.toObject() as any) : null;
 }
-
-async function changePassword(userId: string,currentPassword: string,newPassword: string,): Promise<void> {
+async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
   const user = await User.findById(userId);
   if (!user) throw new AppError("User not found", HTTPStatusCodes.NOT_FOUND);
 
   const isValid = await verifyPassword(currentPassword, user.password);
-  if (!isValid) throw new AppError("Current password is incorrect", HTTPStatusCodes.UNAUTHORIZED);
+  if (!isValid)
+    throw new AppError(
+      "Current password is incorrect",
+      HTTPStatusCodes.UNAUTHORIZED,
+    );
 
   const hashed = await hashPassword(newPassword);
   await User.findByIdAndUpdate(userId, {
@@ -86,7 +147,10 @@ async function changePassword(userId: string,currentPassword: string,newPassword
   });
 }
 
-async function resetPassword(userId: string,newPassword: string,): Promise<void> {
+async function resetPassword(
+  userId: string,
+  newPassword: string,
+): Promise<void> {
   const hashed = await hashPassword(newPassword);
   await User.findByIdAndUpdate(userId, {
     password: hashed,

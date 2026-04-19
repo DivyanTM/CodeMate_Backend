@@ -12,4 +12,5 @@ export const updateProfileSchema = Joi.object({
     linkedinURI: httpsUri,
     portfolioURI: httpsUri,
     lastKnownLocation: Joi.array().items(Joi.number()).length(2).optional(),
+    skills: Joi.array().items(Joi.string().trim()).optional(),
 }).min(1);
