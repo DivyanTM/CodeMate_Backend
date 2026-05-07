@@ -144,41 +144,43 @@ async function likeUser(userId: string, targetId: string): Promise<IMatch> {
     if (userId === targetId)
         throw new AppError("Cannot like yourself", HTTPStatusCodes.BAD_REQUEST);
 
-    
-    const existing = await Match.findOne({
-        $or: [
-        { person1: userId, person2: targetId },
-        { person1: targetId, person2: userId },
-        ],
-    });
-    if (existing)
-        throw new AppError(
-        "Already interacted with this user",
-        HTTPStatusCodes.CONFLICT,
-        );
-
-
+    // 1. FIRST check: Did they already like me?
     const theyLikedMe = await Match.findOne({
         person1: targetId,
         person2: userId,
         status: "pending",
     });
 
+    // If yes, upgrade it to a mutual match immediately!
     if (theyLikedMe) {
         const accepted = await Match.findByIdAndUpdate(
-        theyLikedMe._id,
-        { status: "accepted" },
-        { new: true },
+            theyLikedMe._id,
+            { status: "accepted" },
+            { new: true },
         );
         return accepted!.toObject() as IMatch;
     }
 
+    // 2. SECOND check: Did *I* already interact with them previously?
+    const iAlreadyInteracted = await Match.findOne({
+        person1: userId,
+        person2: targetId,
+    });
 
+    if (iAlreadyInteracted) {
+        throw new AppError(
+            "Already interacted with this user",
+            HTTPStatusCodes.CONFLICT,
+        );
+    }
+
+    // 3. If no past interactions, create a fresh pending like
     const match = await Match.create({
         person1: userId,
         person2: targetId,
         status: "pending",
     });
+    
     return match.toObject() as IMatch;
 }
 
@@ -186,25 +188,38 @@ async function rejectUser(userId: string, targetId: string): Promise<void> {
     if (userId === targetId)
         throw new AppError("Cannot reject yourself", HTTPStatusCodes.BAD_REQUEST);
 
-    const existing = await Match.findOne({
-        $or: [
-        { person1: userId, person2: targetId },
-        { person1: targetId, person2: userId },
-        ],
+    // 1. If they liked me, but I swipe left, update their pending like to rejected
+    const theyLikedMe = await Match.findOne({
+        person1: targetId,
+        person2: userId,
+        status: "pending",
     });
-    if (existing)
-        throw new AppError(
-        "Already interacted with this user",
-        HTTPStatusCodes.CONFLICT,
-        );
 
+    if (theyLikedMe) {
+        await Match.findByIdAndUpdate(theyLikedMe._id, { status: "rejected" });
+        return;
+    }
+
+    // 2. Check if I already interacted with them
+    const iAlreadyInteracted = await Match.findOne({
+        person1: userId,
+        person2: targetId,
+    });
+
+    if (iAlreadyInteracted) {
+        throw new AppError(
+            "Already interacted with this user",
+            HTTPStatusCodes.CONFLICT,
+        );
+    }
+
+    // 3. Create a fresh rejection record
     await Match.create({
         person1: userId,
         person2: targetId,
         status: "rejected",
     });
 }
-
 async function getAcceptedMatches(userId: string): Promise<IMatch[]> {
     const matches = await Match.find({
         $or: [{ person1: userId }, { person2: userId }],
