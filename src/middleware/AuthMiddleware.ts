@@ -17,7 +17,15 @@ export function authMiddleware(
     const payload = verifyAccessToken(token);
     req.user = payload;
     next();
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    // 🚀 CRITICAL FIX: Intercept JWT errors and convert them to your AppError
+    if (err.name === "TokenExpiredError") {
+      next(new AppError("Token expired. Please log in again.", HTTPStatusCodes.UNAUTHORIZED));
+    } else if (err.name === "JsonWebTokenError") {
+      next(new AppError("Invalid token.", HTTPStatusCodes.UNAUTHORIZED));
+    } else {
+      // If it's already an AppError (like the "No token provided" one), pass it normally
+      next(err); 
+    }
   }
 }
