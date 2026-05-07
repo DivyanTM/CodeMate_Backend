@@ -17,7 +17,7 @@ function getParam(req: Request, key: string): string {
 }
 
 async function getCandidates(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const { error, value } = MatchValidator.getCandidatesSchema.validate(
@@ -44,7 +44,7 @@ async function getCandidates(req: Request, res: Response): Promise<void> {
 }
 
 async function likeUser(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
     const targetId = getParam(req, "targetId");
 
@@ -61,7 +61,7 @@ async function likeUser(req: Request, res: Response): Promise<void> {
 }
 
 async function rejectUser(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
     const targetId = getParam(req, "targetId");
 
@@ -74,7 +74,7 @@ async function rejectUser(req: Request, res: Response): Promise<void> {
 }
 
 async function getAcceptedMatches(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const matches = await MatchService.getAcceptedMatches(userId);
@@ -86,7 +86,7 @@ async function getAcceptedMatches(req: Request, res: Response): Promise<void> {
 }
 
 async function getPendingLikes(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
 
     const likes = await MatchService.getPendingLikes(userId);
@@ -98,7 +98,7 @@ async function getPendingLikes(req: Request, res: Response): Promise<void> {
 }
 
 async function unmatch(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", HTTPStatusCodes.UNAUTHORIZED);
     const matchId = getParam(req, "matchId");
 
